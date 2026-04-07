@@ -187,6 +187,52 @@ tr:hover td { background: var(--bg2); }
 </style>
 </head>
 <body>
+<style>
+#login-screen{position:fixed;inset:0;background:#f5f5f3;display:flex;align-items:center;justify-content:center;z-index:9999;}
+#login-box{background:white;border:0.5px solid rgba(0,0,0,.12);border-radius:12px;padding:40px 36px;width:340px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+#login-logo{font-size:22px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px;}
+#login-logo span{color:#185FA5;}
+#login-sub{font-size:13px;color:#6b6b6b;margin-bottom:24px;}
+#login-input{width:100%;padding:10px 12px;border:0.5px solid rgba(0,0,0,.22);border-radius:8px;font-size:14px;text-align:center;letter-spacing:2px;box-sizing:border-box;margin-bottom:10px;font-family:inherit;}
+#login-input:focus{outline:none;border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.1);}
+#login-btn{width:100%;padding:10px;background:#185FA5;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px;}
+#login-btn:hover{background:#0C447C;}
+#login-err{font-size:12px;color:#A32D2D;display:none;margin-top:4px;}
+</style>
+<div id="login-screen">
+  <div id="login-box">
+    <div id="login-logo">Legis<span>Track</span></div>
+    <div id="login-sub">Gestión de reclamos — Acceso privado</div>
+    <input id="login-input" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkPass()"/>
+    <button id="login-btn" onclick="checkPass()">Ingresar</button>
+    <div id="login-err">Contraseña incorrecta</div>
+  </div>
+</div>
+<script>
+(function(){
+  var HASH='f2d35e3e8bf37b3571a43a891f34d0ea4c8f2a0e9e3f3a1b7c8d9e0f1a2b3c4';
+  function h(s){
+    var h=0;for(var i=0;i<s.length;i++){h=Math.imul(31,h)+s.charCodeAt(i)|0;}
+    return Math.abs(h).toString(16).padStart(8,'0');
+  }
+  var stored=sessionStorage.getItem('lt_auth');
+  if(stored===h('Reclamoscastellanos00')){
+    document.getElementById('login-screen').style.display='none';
+  }
+  window.checkPass=function(){
+    var v=document.getElementById('login-input').value;
+    if(h(v)===h('Reclamoscastellanos00')){
+      sessionStorage.setItem('lt_auth',h('Reclamoscastellanos00'));
+      document.getElementById('login-screen').style.display='none';
+    } else {
+      document.getElementById('login-err').style.display='block';
+      document.getElementById('login-input').value='';
+      document.getElementById('login-input').focus();
+    }
+  };
+})();
+</script>
+
 <div class="app">
 
 
@@ -1152,7 +1198,53 @@ function copyEscrito(){
 function printEscrito(){
   const w=window.open('','_blank');
   const txt=document.getElementById('esc-out').value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Escrito de Patrocinio</title><style>body{font-family:Georgia,serif;font-size:13.5px;line-height:1.85;margin:2.5cm 3cm;color:#111;}pre{white-space:pre-wrap;font-family:Georgia,serif;}</style></head><body><pre>'+txt+'<\/pre><\/body><\/html>');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Escrito de Patrocinio</title><style>body{font-family:Georgia,serif;font-size:13.5px;line-height:1.85;margin:2.5cm 3cm;color:#111;}pre{white-space:pre-wrap;font-family:Georgia,serif;}</style></head><body>
+<style>
+#login-screen{position:fixed;inset:0;background:#f5f5f3;display:flex;align-items:center;justify-content:center;z-index:9999;}
+#login-box{background:white;border:0.5px solid rgba(0,0,0,.12);border-radius:12px;padding:40px 36px;width:340px;max-width:95vw;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08);}
+#login-logo{font-size:22px;font-weight:600;letter-spacing:-0.4px;margin-bottom:6px;}
+#login-logo span{color:#185FA5;}
+#login-sub{font-size:13px;color:#6b6b6b;margin-bottom:24px;}
+#login-input{width:100%;padding:10px 12px;border:0.5px solid rgba(0,0,0,.22);border-radius:8px;font-size:14px;text-align:center;letter-spacing:2px;box-sizing:border-box;margin-bottom:10px;font-family:inherit;}
+#login-input:focus{outline:none;border-color:#185FA5;box-shadow:0 0 0 3px rgba(24,95,165,.1);}
+#login-btn{width:100%;padding:10px;background:#185FA5;color:white;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:10px;}
+#login-btn:hover{background:#0C447C;}
+#login-err{font-size:12px;color:#A32D2D;display:none;margin-top:4px;}
+</style>
+<div id="login-screen">
+  <div id="login-box">
+    <div id="login-logo">Legis<span>Track</span></div>
+    <div id="login-sub">Gestión de reclamos — Acceso privado</div>
+    <input id="login-input" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')checkPass()"/>
+    <button id="login-btn" onclick="checkPass()">Ingresar</button>
+    <div id="login-err">Contraseña incorrecta</div>
+  </div>
+</div>
+<script>
+(function(){
+  var HASH='f2d35e3e8bf37b3571a43a891f34d0ea4c8f2a0e9e3f3a1b7c8d9e0f1a2b3c4';
+  function h(s){
+    var h=0;for(var i=0;i<s.length;i++){h=Math.imul(31,h)+s.charCodeAt(i)|0;}
+    return Math.abs(h).toString(16).padStart(8,'0');
+  }
+  var stored=sessionStorage.getItem('lt_auth');
+  if(stored===h('Reclamoscastellanos00')){
+    document.getElementById('login-screen').style.display='none';
+  }
+  window.checkPass=function(){
+    var v=document.getElementById('login-input').value;
+    if(h(v)===h('Reclamoscastellanos00')){
+      sessionStorage.setItem('lt_auth',h('Reclamoscastellanos00'));
+      document.getElementById('login-screen').style.display='none';
+    } else {
+      document.getElementById('login-err').style.display='block';
+      document.getElementById('login-input').value='';
+      document.getElementById('login-input').focus();
+    }
+  };
+})();
+</script>
+<pre>'+txt+'<\/pre><\/body><\/html>');
   w.document.close(); w.print();
 }
 
