@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LegisTrack — Gestión de Reclamos</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root {
+  --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede9;
+  --text: #1a1a1a; --text2: #6b6b6b; --text3: #9e9d99;
+  --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22); --border3: rgba(0,0,0,0.35);
+  --blue: #185FA5; --blue-bg: #E6F1FB; --blue-text: #0C447C;
+  --amber-bg: #FAEEDA; --amber-text: #633806;
+  --green-bg: #EAF3DE; --green-text: #27500A;
+  --red-bg: #FCEBEB; --red-text: #791F1F;
+  --gray-bg: #F1EFE8; --gray-text: #444441;
+  --pink-bg: #FBEAF0; --pink-text: #993556;
+  --radius: 8px; --radius-lg: 12px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); font-size: 14px; min-height: 100vh; }
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* TOPBAR */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 0.5px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 50; flex-wrap: wrap; gap: 8px; }
+.logo { font-size: 16px; font-weight: 600; letter-spacing: -0.4px; }
+.logo span { color: var(--blue); }
+.nav { display: flex; gap: 3px; }
+.nb { padding: 6px 13px; border: 0.5px solid transparent; border-radius: var(--radius); font-size: 13px; cursor: pointer; background: transparent; color: var(--text2); transition: all .12s; }
+.nb.active { background: var(--bg2); color: var(--text); border-color: var(--border2); font-weight: 500; }
+.nb:hover:not(.active) { background: var(--bg2); }
+.topbar-right { display: flex; gap: 8px; }
+
+/* STATS */
+.stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 20px; background: var(--bg2); border-bottom: 0.5px solid var(--border); }
+.stat { background: var(--bg); border-radius: var(--radius); padding: 10px 13px; border: 0.5px solid var(--border); }
+.stat-label { font-size: 10px; color: var(--text2); margin-bottom: 2px; text-transform: uppercase; letter-spacing: .5px; }
+.stat-value { font-size: 22px; font-weight: 600; }
+.sv-b { color: var(--blue); } .sv-a { color: #BA7517; } .sv-g { color: #3B6D11; } .sv-r { color: #A32D2D; }
+
+/* CONTENT */
+.content { flex: 1; padding: 16px 20px; }
+.sec { display: none; } .sec.active { display: block; }
+
+/* TOOLBAR */
+.toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+.si { padding: 8px 11px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; background: var(--bg); color: var(--text); }
+.si:focus { outline: none; border-color: var(--blue); }
+.si.grow { flex: 1; min-width: 180px; }
+
+/* BUTTONS */
+.bp { padding: 8px 15px; background: var(--blue); color: white; border: none; border-radius: var(--radius); font-size: 13px; cursor: pointer; font-weight: 500; white-space: nowrap; transition: background .12s; }
+.bp:hover { background: var(--blue-text); }
+.bs { padding: 8px 15px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; cursor: pointer; background: var(--bg); color: var(--text2); white-space: nowrap; transition: background .12s; }
+.bs:hover { background: var(--bg2); }
+
+/* TABLE */
+.tw { overflow-x: auto; border-radius: var(--radius-lg); border: 0.5px solid var(--border); background: var(--bg); }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 950px; }
+th { text-align: left; padding: 8px 11px; color: var(--text2); font-weight: 500; border-bottom: 0.5px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .4px; white-space: nowrap; background: var(--bg2); }
+th:first-child { border-radius: var(--radius-lg) 0 0 0; }
+th:last-child { border-radius: 0 var(--radius-lg) 0 0; }
+td { padding: 9px 11px; border-bottom: 0.5px solid var(--border); color: var(--text); vertical-align: middle; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: var(--bg2); }
+
+/* BADGES */
+.badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+.b-ing { background: var(--blue-bg); color: var(--blue-text); }
+.b-tra { background: var(--amber-bg); color: var(--amber-text); }
+.b-ofe { background: var(--green-bg); color: var(--green-text); }
+.b-cer { background: var(--gray-bg); color: var(--gray-text); }
+.b-urg { background: var(--red-bg); color: var(--red-text); }
+.b-rec { background: var(--pink-bg); color: var(--pink-text); }
+.b-car { background: #dbeafe; color: #1e40af; }
+.b-pen { background: #EEEDFE; color: #3C3489; }
+.tdm { background: var(--blue-bg); color: var(--blue); padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+.tles { background: var(--pink-bg); color: var(--pink-text); padding: 2px 7px; border-radius: 4px; font-size: 11px; }
+
+/* ACTION BTNS */
+.ab { padding: 3px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 11px; cursor: pointer; background: var(--bg); color: var(--text2); }
+.ab:hover { background: var(--bg2); color: var(--text); }
+.ab-d { color: #A32D2D; }
+
+/* COMP LINK */
+.cl { color: var(--blue); cursor: pointer; border-bottom: 0.5px dotted var(--blue); }
+
+/* MODALS */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 200; align-items: flex-start; justify-content: center; padding: 30px 12px; overflow-y: auto; }
+.overlay.open { display: flex; }
+.modal { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border2); padding: 22px; width: 580px; max-width: 98vw; box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+.modal.wide { width: 680px; }
+.modal.narrow { width: 460px; }
+.mt { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.fg { display: flex; flex-direction: column; gap: 4px; }
+.fg.full { grid-column: 1/-1; }
+.fl { font-size: 11px; color: var(--text2); font-weight: 500; text-transform: uppercase; letter-spacing: .3px; }
+.fi { padding: 8px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; background: var(--bg); color: var(--text); }
+.fi:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,.1); }
+.fta { padding: 8px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; background: var(--bg); color: var(--text); resize: vertical; font-family: inherit; }
+.fta:focus { outline: none; border-color: var(--blue); }
+.mf { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; border-top: 0.5px solid var(--border); padding-top: 14px; }
+.bc { padding: 8px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; cursor: pointer; background: var(--bg); color: var(--text2); }
+
+/* PANEL */
+.panel { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; }
+.ptitle { font-size: 11px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 12px; }
+
+/* ALERTS */
+.alert-bar { background: var(--red-bg); border: 0.5px solid #F7C1C1; border-radius: var(--radius); padding: 11px 14px; margin-bottom: 14px; display: none; }
+.alert-bar.show { display: block; }
+.alert-title { font-size: 12px; font-weight: 600; color: #791F1F; margin-bottom: 6px; }
+.alert-item { font-size: 12px; color: #A32D2D; padding: 3px 0; border-bottom: 0.5px solid #F7C1C1; }
+.alert-item:last-child { border-bottom: none; }
+
+/* CALENDARIO */
+.cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.cal-month { font-size: 17px; font-weight: 600; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav button { padding: 6px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); cursor: pointer; font-size: 13px; color: var(--text2); }
+.cal-nav button:hover { background: var(--bg2); }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-dow { text-align: center; font-size: 11px; color: var(--text2); padding: 5px 0; text-transform: uppercase; letter-spacing: .3px; font-weight: 500; }
+.cal-day { min-height: 60px; border: 0.5px solid var(--border); border-radius: var(--radius); padding: 5px 6px; background: var(--bg); }
+.cal-day.other { background: var(--bg2); opacity: .5; }
+.cal-day.today { border-color: var(--blue); background: #E6F1FB22; }
+.cal-day.has-ev { cursor: pointer; }
+.cal-day.has-ev:hover { background: var(--bg2); }
+.cal-dn { font-size: 12px; font-weight: 500; }
+.cal-day.today .cal-dn { color: var(--blue); font-weight: 700; }
+.cal-ev { font-size: 10px; padding: 1px 4px; border-radius: 3px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ev-urg { background: var(--red-bg); color: var(--red-text); }
+.ev-prox { background: var(--amber-bg); color: var(--amber-text); }
+.ev-ok { background: var(--green-bg); color: var(--green-text); }
+
+/* MENSAJES */
+.msg-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.msg-tab { padding: 7px 16px; border: 0.5px solid var(--border2); border-radius: var(--radius); font-size: 13px; cursor: pointer; background: var(--bg); color: var(--text2); font-weight: 500; }
+.msg-tab.active { background: var(--blue); color: white; border-color: var(--blue); }
+.msg-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 15px; margin-bottom: 10px; background: var(--bg); }
+.msg-title { font-size: 14px; font-weight: 600; margin-bottom: 7px; }
+.msg-preview { font-size: 12.5px; color: var(--text2); line-height: 1.6; white-space: pre-wrap; background: var(--bg2); border-radius: var(--radius); padding: 10px; margin-bottom: 9px; max-height: 90px; overflow: hidden; }
+.msg-chip { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10.5px; background: var(--green-bg); color: var(--green-text); margin-right: 4px; }
+
+/* COMPAÑIAS */
+.comp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.comp-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 14px; background: var(--bg); }
+.dir-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 16px; background: var(--bg); }
+.dir-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.dir-ct-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 0.5px solid var(--border); font-size: 12.5px; }
+.dir-ct-row:last-child { border-bottom: none; }
+.dir-obs { display: inline-block; padding: 1px 7px; border-radius: 20px; font-size: 10.5px; background: var(--amber-bg); color: var(--amber-text); margin-left: 5px; }
+.dir-obs-red { background: var(--red-bg); color: var(--red-text); }
+.dir-obs-green { background: var(--green-bg); color: var(--green-text); }
+.comp-name { font-size: 14px; font-weight: 600; }
+.ct-chip { display: inline-flex; padding: 2px 9px; border-radius: 20px; background: var(--bg2); border: 0.5px solid var(--border); font-size: 11px; color: var(--text2); margin: 2px; }
+.ct-row { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 0.5px solid var(--border); font-size: 13px; }
+.ct-row:last-child { border-bottom: none; }
+.ct-label { color: var(--text2); min-width: 80px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; margin-top: 2px; }
+.ct-val a { color: var(--blue); text-decoration: none; }
+.ct-val a:hover { text-decoration: underline; }
+
+/* POPUP */
+.popup-m { background: var(--bg); border-radius: var(--radius-lg); border: 0.5px solid var(--border2); padding: 22px; width: 480px; max-width: 98vw; box-shadow: 0 8px 32px rgba(0,0,0,.12); }
+
+/* ESCRITO */
+.esc-two { display: grid; grid-template-columns: 340px 1fr; gap: 16px; }
+@media (max-width: 800px) { .esc-two { grid-template-columns: 1fr; } }
+.drop-zone { border: 1.5px dashed var(--border2); border-radius: var(--radius-lg); padding: 24px; text-align: center; color: var(--text2); font-size: 13px; cursor: pointer; transition: all .15s; margin-bottom: 12px; }
+.drop-zone:hover, .drop-zone.drag { border-color: var(--blue); color: var(--blue); background: #E6F1FB18; }
+.escrito-box { background: var(--bg2); border-radius: var(--radius); border: 0.5px solid var(--border); padding: 16px; min-height: 180px; font-size: 13px; line-height: 1.75; white-space: pre-wrap; font-family: 'Georgia', serif; }
+
+/* EMPTY */
+.empty-td { text-align: center; padding: 36px; color: var(--text2); font-size: 13px; }
+
+/* SCROLLBAR */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+
+
+/* PRINT */
+@media print { .topbar, .stats-bar, .toolbar, .ab, .bp, .bs, .nb { display: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="logo">Legis<span>Track</span></div>
+    <div class="nav">
+      <button class="nb active" onclick="go('reclamos',this)">Reclamos</button>
+      <button class="nb" onclick="go('calendario',this)">Calendario</button>
+      <button class="nb" onclick="go('mensajes',this)">Mensajes</button>
+      <button class="nb" onclick="go('companias',this)">Compañías</button>
+      <button class="nb" onclick="go('contactos',this)">Directorio</button>
+      <button class="nb" onclick="go('honorarios',this)">Honorarios</button>
+      <button class="nb" onclick="go('escrito',this)">Escrito IA</button>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <button class="bs" onclick="exportarDatos()">Exportar datos</button>
+    <button class="bs" onclick="importarDatos()">Importar datos</button>
+    <input type="file" id="import-json" accept=".json" style="display:none" onchange="leerImport(this)"/>
+    <button class="bp" onclick="openModal()">+ Nuevo reclamo</button>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat"><div class="stat-label">Activos</div><div class="stat-value sv-b" id="st-t">0</div></div>
+  <div class="stat"><div class="stat-label">En trámite</div><div class="stat-value sv-a" id="st-tr">0</div></div>
+  <div class="stat"><div class="stat-label">Con oferta</div><div class="stat-value sv-g" id="st-o">0</div></div>
+  <div class="stat"><div class="stat-label">Urgentes</div><div class="stat-value sv-r" id="st-u">0</div></div>
+</div>
+
+<div class="content">
+
+<!-- RECLAMOS -->
+<div class="sec active" id="sec-reclamos">
+  <div class="toolbar">
+    <input class="si grow" placeholder="Buscar cliente, compañía, productor, expediente..." oninput="renderTable()" id="srch"/>
+    <div style="position:relative;" id="estado-dropdown-wrap">
+      <button class="si" onclick="toggleEstadoDropdown(event)" id="estado-dropdown-btn" style="cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;min-width:160px;">
+        <span id="estado-dropdown-label" style="flex:1;text-align:left;">Todos los estados</span>
+        <span style="font-size:10px;color:var(--text2);">&#9660;</span>
+      </button>
+      <div id="estado-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:100;background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:6px 0;min-width:200px;box-shadow:0 4px 16px rgba(0,0,0,.12);">
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 14px;cursor:pointer;font-size:13px;">
+          <input type="checkbox" id="est-all" checked style="accent-color:var(--blue);width:14px;height:14px;" onchange="toggleAllEstados(this)"/> Todos los estados
+        </label>
+        <div style="border-top:0.5px solid var(--border);margin:4px 0;"></div>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="A cargar" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> A cargar</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="Ingresado" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> Ingresado</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="En trámite" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> En tr&#225;mite</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="Oferta realizada" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> Oferta realizada</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="Urgente" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> Urgente</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="Cerrado" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> Cerrado</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="Pendiente" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> Pendiente</label>
+        <label style="display:flex;align-items:center;gap:8px;padding:5px 14px;cursor:pointer;font-size:13px;"><input type="checkbox" class="est-cb" value="Rechazado" style="accent-color:var(--blue);width:14px;height:14px;" onchange="onEstadoCbChange()"/> Rechazado</label>
+      </div>
+    </div>
+    <select class="si" onchange="renderTable()" id="f-t">
+      <option value="">Todos los tipos</option><option>Daño material</option><option>Lesiones</option>
+    </select>
+  </div>
+  <div class="tw">
+  <table>
+    <thead><tr>
+      <th>Expediente</th><th>Cliente</th><th>Compañía</th><th>Tipo</th>
+      <th>Contacto cliente</th><th>Productor</th><th>Monto reclamado</th><th>Honorarios</th>
+      <th>Estado</th><th>Vencimiento</th><th>Obs.</th><th>Acciones</th>
+    </tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  </div>
+</div>
+
+<!-- CALENDARIO -->
+<div class="sec" id="sec-calendario">
+  <div class="alert-bar" id="alert-bar">
+    <div class="alert-title">⚠ Próximos 7 días — atención requerida</div>
+    <div id="alert-list"></div>
+  </div>
+  <div class="cal-header">
+    <div class="cal-month" id="cal-label"></div>
+    <div class="cal-nav">
+      <button onclick="calMove(-1)">← Anterior</button>
+      <button onclick="calMove(0)">Hoy</button>
+      <button onclick="calMove(1)">Siguiente →</button>
+    </div>
+  </div>
+  <div class="cal-grid" id="cal-grid"></div>
+</div>
+
+<!-- MENSAJES -->
+<div class="sec" id="sec-mensajes">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+    <div class="msg-tabs" style="margin-bottom:0;">
+      <button class="msg-tab active" onclick="switchMsgTab('wpp',this)">WhatsApp</button>
+      <button class="msg-tab" onclick="switchMsgTab('mail',this)">Mail</button>
+    </div>
+    <button class="bp" onclick="openEditMsgModal(null)">+ Nuevo modelo</button>
+  </div>
+  <div id="msg-wpp"></div>
+  <div id="msg-mail" style="display:none;"></div>
+</div>
+
+<!-- COMPAÑIAS -->
+<div class="sec" id="sec-companias">
+  <div class="toolbar">
+    <input class="si grow" placeholder="Buscar compañía..." oninput="renderComps()" id="sc"/>
+    <button class="bs" onclick="document.getElementById('xl-in').click()">Importar Excel</button>
+    <input type="file" id="xl-in" accept=".xlsx,.xls,.csv" style="display:none" onchange="importXl(this)"/>
+    <button class="bp" onclick="openCompModal()">+ Agregar compañía</button>
+  </div>
+  <div class="comp-grid" id="comp-grid"></div>
+  <div id="comp-empty" style="display:none;text-align:center;padding:48px;color:var(--text2);">Sin compañías. Agregá una o importá tu Excel.</div>
+</div>
+
+<!-- DIRECTORIO COMPAÑIAS -->
+<div class="sec" id="sec-contactos">
+  <div class="toolbar" style="margin-bottom:14px;">
+    <input class="si grow" placeholder="Buscar compañía, contacto, mail..." oninput="renderDirectorio()" id="sd"/>
+    <button class="bp" onclick="openDirModal()">+ Nueva compañía</button>
+  </div>
+  <div id="dir-grid"></div>
+</div>
+
+<!-- HONORARIOS -->
+<div class="sec" id="sec-honorarios">
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;">
+    <div class="stat" style="padding:14px 18px;">
+      <div class="stat-label">Honorarios cobrados (cerrados)</div>
+      <div class="stat-value sv-g" id="hon-total-cobrado">$0</div>
+    </div>
+    <div class="stat" style="padding:14px 18px;">
+      <div class="stat-label">Honorarios pendientes (ofertas)</div>
+      <div class="stat-value sv-a" id="hon-total-pend">$0</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- COBRADOS -->
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#3B6D11;"></span>
+        Honorarios cobrados — reclamos cerrados
+      </div>
+      <div class="tw">
+        <table style="min-width:0;">
+          <thead><tr>
+            <th>Expediente</th><th>Cliente</th><th>Compañía</th><th>Honorarios</th>
+          </tr></thead>
+          <tbody id="hon-tbody-cobrado"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PENDIENTES -->
+    <div>
+      <div style="font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+        <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#BA7517;"></span>
+        Honorarios pendientes — oferta realizada
+      </div>
+      <div class="tw">
+        <table style="min-width:0;">
+          <thead><tr>
+            <th>Expediente</th><th>Cliente</th><th>Compañía</th><th>Honorarios</th><th>Fecha estimada cobro</th>
+          </tr></thead>
+          <tbody id="hon-tbody-pend"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ESCRITO -->
+<div class="sec" id="sec-escrito">
+  <div class="esc-two">
+    <div class="panel">
+      <div class="ptitle">Datos del escrito</div>
+
+      <div class="fg" style="margin-bottom:10px;">
+        <label class="fl">Cargar desde expediente</label>
+        <select class="fi" id="esc-exp" onchange="loadFromExp()"><option value="">Completar manualmente...</option></select>
+      </div>
+
+      <div style="border-top:0.5px solid var(--border);margin:10px 0 12px;"></div>
+      <div style="display:grid;gap:9px;">
+
+        <div style="background:var(--bg2);border-radius:var(--radius);padding:10px 12px;font-size:12px;color:var(--text2);">
+          <span style="font-weight:500;color:var(--text);">Abogada:</span> Dra. MARIA AZUL CASTELLANOS — Mat. 1-44491
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-top:2px;">Datos del cliente</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="fg full"><label class="fl">Nombre y apellido</label><input class="fi" id="e-cli" placeholder="Nombre completo"/></div>
+          <div class="fg"><label class="fl">DNI</label><input class="fi" id="e-dni" placeholder="28.456.789"/></div>
+          <div class="fg"><label class="fl">Domicilio</label><input class="fi" id="e-domicilio" placeholder="Calle, número, ciudad"/></div>
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-top:4px;">Datos del siniestro</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div class="fg"><label class="fl">Compañía de seguros</label><input class="fi" id="e-comp" placeholder="Ej: LA SEGUNDA"/></div>
+          <div class="fg"><label class="fl">N° siniestro / reclamo</label><input class="fi" id="e-nsin" placeholder="N° que dio la compañía"/></div>
+          <div class="fg"><label class="fl">Fecha del siniestro</label><input class="fi" type="date" id="e-fec"/></div>
+          <div class="fg"><label class="fl">Tipo de reclamo</label>
+            <select class="fi" id="e-tipo"><option value="daño material">Daño material</option><option value="lesiones">Lesiones</option></select>
+          </div>
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-top:4px;">Vehículo</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+          <div class="fg"><label class="fl">Marca</label><input class="fi" id="e-marca" placeholder="Ej: Volkswagen"/></div>
+          <div class="fg"><label class="fl">Modelo</label><input class="fi" id="e-modelo" placeholder="Ej: Gol Trend"/></div>
+          <div class="fg"><label class="fl">Patente</label><input class="fi" id="e-patente" placeholder="Ej: AB 123 CD"/></div>
+        </div>
+
+        <div style="font-size:11px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-top:4px;">Relato y monto</div>
+        <div class="fg"><label class="fl">Relato del hecho</label><textarea class="fta" id="e-desc" rows="3" placeholder="Describí brevemente cómo ocurrió el siniestro..."></textarea></div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:end;">
+          <div class="fg"><label class="fl">Monto reclamado ($)</label><input class="fi" id="e-monto" placeholder="1.500.000"/></div>
+          <div class="fg">
+            <label class="fl">¿Corresponde a franquicia?</label>
+            <label style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:13px;background:var(--bg);">
+              <input type="checkbox" id="e-franquicia" style="accent-color:var(--blue);width:14px;height:14px;"/> Sí, es franquicia
+            </label>
+          </div>
+        </div>
+
+        <button class="bp" onclick="genEscrito()" style="width:100%;margin-top:6px;">Generar escrito</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div class="panel" style="flex:1;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <div class="ptitle" style="margin:0;">Escrito de patrocinio</div>
+          <div style="display:flex;gap:6px;">
+            <button class="bs" style="font-size:12px;padding:5px 11px;" onclick="copyEscrito()">Copiar</button>
+            <button class="bs" style="font-size:12px;padding:5px 11px;" onclick="printEscrito()">Imprimir</button>
+          </div>
+        </div>
+        <textarea id="esc-out" class="escrito-box" style="width:100%;min-height:500px;resize:vertical;border:none;outline:none;background:var(--bg2);font-family:Georgia,serif;">Completá los datos y hacé clic en "Generar escrito".</textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- end content -->
+</div><!-- end app -->
+
+<!-- MODAL RECLAMO -->
+<div class="overlay" id="modal-r">
+<div class="modal">
+  <div class="mt" id="mtitle">Nuevo reclamo</div>
+  <div class="form-grid">
+    <div class="fg"><label class="fl">Cliente</label><input class="fi" id="f-cli" placeholder="Nombre completo"/></div>
+    <div class="fg"><label class="fl">Compañía de seguros</label><input class="fi" id="f-comp" placeholder="Ej: La Segunda, Zurich, MAPFRE..." list="comp-list"/><datalist id="comp-list"></datalist></div>
+    <div class="fg"><label class="fl">Contacto del cliente / representante</label><input class="fi" id="f-con" placeholder="Nombre de quien nos contacta"/></div>
+    <div class="fg"><label class="fl">Relación con el cliente</label><input class="fi" id="f-rel" placeholder="Ej: titular, cónyuge, apoderado..."/></div>
+    <div class="fg"><label class="fl">Teléfono del contacto</label><input class="fi" id="f-tel" placeholder="351-XXXXXXX"/></div>
+    <div class="fg"><label class="fl">Mail del contacto</label><input class="fi" id="f-mail" placeholder="contacto@mail.com"/></div>
+    <div class="fg"><label class="fl">Productor que derivó el caso</label><input class="fi" id="f-prod" placeholder="Ej: García Seguros"/></div>
+    <div class="fg full" style="background:var(--blue-bg);border:1.5px solid var(--blue);border-radius:var(--radius);padding:10px 12px;margin-top:2px;">
+      <label class="fl" style="color:var(--blue-text);">N° de reclamo (compañía) ★</label>
+      <input class="fi" id="f-nrocomp" placeholder="El número que te da la compañía al cargar el reclamo" style="background:white;margin-top:2px;"/>
+      <div style="font-size:11px;color:var(--blue-text);margin-top:3px;">Podés dejarlo vacío al inicio y completarlo después al editar.</div>
+    </div>
+    <div class="fg"><label class="fl">Tipo</label>
+      <select class="fi" id="f-tipo"><option>Daño material</option><option>Lesiones</option></select>
+    </div>
+    <div class="fg"><label class="fl">Estado</label>
+      <select class="fi" id="f-est"><option>Ingresado</option><option>En trámite</option><option>Oferta realizada</option><option>Pendiente</option><option>Cerrado</option><option>Urgente</option><option>Rechazado</option><option>A cargar</option></select>
+    </div>
+    <div class="fg"><label class="fl">Monto reclamado ($)</label><input class="fi" id="f-monto" placeholder="0"/></div>
+    <div class="fg"><label class="fl">Honorarios ($)</label><input class="fi" id="f-hon" placeholder="0"/></div>
+    <div class="fg" style="justify-content:flex-end;">
+      <label class="fl">Franquicia</label>
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);cursor:pointer;" onclick="var e=event||window.event;e.stopPropagation();var cb=document.getElementById('f-franquicia');cb.checked=!cb.checked;">
+        <input type="checkbox" id="f-franquicia" style="accent-color:#185FA5;width:14px;height:14px;pointer-events:none;"/> <span style="font-size:13px;">Es franquicia</span>
+      </div>
+    </div>
+    <div class="fg"><label class="fl">Fecha del siniestro</label><input class="fi" type="date" id="f-fec"/></div>
+    <div class="fg"><label class="fl">Próxima acción / vencimiento</label><input class="fi" type="date" id="f-venc"/></div>
+    <div class="fg full"><label class="fl">Observaciones</label><textarea class="fta" id="f-obs" rows="2" placeholder="Notas, documentación pendiente, estado del expediente..."></textarea></div>
+  </div>
+  <div class="mf">
+    <button class="bc" onclick="close2('modal-r')">Cancelar</button>
+    <button class="bp" onclick="saveReclamo()">Guardar reclamo</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL COMPAÑIA -->
+<div class="overlay" id="modal-c">
+<div class="modal narrow">
+  <div class="mt" id="ctitle">Nueva compañia</div>
+  <div style="display:grid;gap:10px;">
+    <div class="fg"><label class="fl">Nombre de la compañía</label><input class="fi" id="c-nom" placeholder="Ej: La Segunda Seguros, Zurich, MAPFRE..."/></div>
+    <div class="fg"><label class="fl">Notas internas (opcional)</label><textarea class="fta" id="c-notas" rows="3" placeholder="Dirección, teléfono central, sitio web, observaciones..."></textarea></div>
+  </div>
+  <div class="mf">
+    <button class="bc" onclick="close2('modal-c')">Cancelar</button>
+    <button class="bp" onclick="saveComp()">Guardar compañía</button>
+  </div>
+</div>
+</div>
+
+
+
+<!-- MODAL EVENTOS DÍA -->
+<div class="overlay" id="modal-ev">
+<div class="modal narrow">
+  <div class="mt" id="ev-title"></div>
+  <div id="ev-body"></div>
+  <div class="mf"><button class="bc" onclick="close2('modal-ev')">Cerrar</button></div>
+</div>
+</div>
+
+<!-- MODAL MENSAJE -->
+<div class="overlay" id="modal-msg">
+<div class="modal wide">
+  <div class="mt" id="msg-mt"></div>
+  <div class="fg" style="margin-bottom:10px;">
+    <label class="fl">Personalizar para expediente</label>
+    <select class="fi" id="msg-exp-sel" onchange="personalizarMsg()"><option value="">Sin expediente (genérico)</option></select>
+  </div>
+  <div class="fg" style="margin-bottom:12px;">
+    <label class="fl">Mensaje</label>
+    <textarea class="fta" id="msg-texto" rows="12" style="font-size:13px;line-height:1.7;"></textarea>
+  </div>
+  <div class="mf">
+    <button class="bc" onclick="close2('modal-msg')">Cancelar</button>
+    <button class="bs" onclick="copyMsg()">Copiar texto</button>
+    <button class="bp" id="msg-wa-btn" style="display:none;" onclick="abrirWA()">Abrir en WhatsApp ↗</button>
+    <button class="bp" id="msg-mail-btn" style="display:none;" onclick="abrirMail()">Abrir en Mail ↗</button>
+  </div>
+</div>
+</div>
+
+<script>
+// ===================== STATE =====================
+let reclamos = [], companias = [], editIdx = null, editCompIdx = null, curCompIdx = null;
+let expCnt = 1, calYear, calMonth, curMsgTemplate = '', curMsgType = '', curMsgSubject = '';
+
+const BC = { Ingresado:'b-ing','En trámite':'b-tra','Oferta realizada':'b-ofe', Cerrado:'b-cer', Urgente:'b-urg', Rechazado:'b-rec', 'A cargar':'b-car', Pendiente:'b-pen' };
+
+// ===================== UTILS =====================
+function today() { return new Date().toISOString().slice(0,10); }
+function addDays(d,n) { const x=new Date(d+'T12:00:00'); x.setDate(x.getDate()+n); return x.toISOString().slice(0,10); }
+function fmt$(v) { return v ? '$'+Number(v).toLocaleString('es-AR') : '—'; }
+
+function close2(id) { document.getElementById(id).classList.remove('open'); }
+function go(tab, btn) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('active'));
+  document.getElementById('sec-'+tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(tab==='calendario') renderCal();
+  if(tab==='companias') renderComps();
+  if(tab==='contactos') renderDirectorio();
+  if(tab==='honorarios') renderHonorarios();
+  if(tab==='escrito') refreshEscSel();
+  if(tab==='mensajes') renderMsgs();
+}
+
+// ===================== PERSISTENCIA =====================
+function guardar() {
+  try {
+    localStorage.setItem('lt_reclamos', JSON.stringify(reclamos));
+    localStorage.setItem('lt_companias', JSON.stringify(companias));
+    localStorage.setItem('lt_cnt', expCnt);
+    localStorage.setItem('lt_ver', DATA_VERSION);
+  } catch(e){}
+}
+function exportarDatos() {
+  const data = JSON.stringify({reclamos, companias, expCnt, userMsgs}, null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  a.download = 'LegisTrack_backup_' + today() + '.json';
+  a.click();
+}
+function importarDatos() { document.getElementById('import-json').click(); }
+function leerImport(input) {
+  const f=input.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=e=>{ try{ const d=JSON.parse(e.target.result); reclamos=d.reclamos||[]; companias=d.companias||[]; expCnt=d.expCnt||1; if(d.userMsgs){userMsgs=d.userMsgs;saveUserMsgs();} guardar(); renderTable(); updateStats(); renderComps(); refreshCompSel('f-comp'); alert('Datos importados correctamente.'); }catch(e){ alert('Archivo inválido.'); } };
+  r.readAsText(f); input.value='';
+}
+
+// ===================== RECLAMOS =====================
+function renderTable() {
+  const q=document.getElementById('srch').value.toLowerCase();
+  const selectedEstados=Array.from(document.querySelectorAll('.est-cb:checked')).map(cb=>cb.value);
+  const fe=selectedEstados;
+  const ft=document.getElementById('f-t').value;
+  const t=today();
+  const list=reclamos.filter(r=>{
+    const mq=!q||(r.cli+r.comp+r.prod+(r.exp||'')+r.obs).toLowerCase().includes(q);
+    return mq&&(!fe.length||fe.includes(r.estado))&&(!ft||r.tipo===ft);
+  });
+  const tb=document.getElementById('tbody');
+  if(!list.length){
+    tb.innerHTML='<tr><td colspan="12" class="empty-td">Sin reclamos. Hacé clic en "+ Nuevo reclamo" para agregar.</td></tr>';
+    return;
+  }
+  tb.innerHTML=list.map(r=>{
+    const ri=reclamos.indexOf(r);
+    const tc=r.tipo==='Lesiones'?'<span class="tles">LES</span>':'<span class="tdm">DM</span>';
+    let vs='',vt=r.venc||'—';
+    if(r.venc&&r.venc<t) vs='color:#A32D2D;font-weight:600;';
+    else if(r.venc&&r.venc<=addDays(t,5)) vs='color:#BA7517;font-weight:600;';
+    const hc=companias.find(c=>c.nombre===r.comp);
+    const ce=hc?`<span class="cl" onclick="verComp('${r.comp.replace(/'/g,"\\'")}')">${r.comp}</span>`:(r.comp||'—');
+    const obsShort = r.obs ? (r.obs.length>40?r.obs.slice(0,40)+'…':r.obs) : '—';
+    return `<tr>
+      <td style="font-size:11px;color:var(--text2);font-family:monospace;">${r.exp}</td>
+      <td style="font-weight:600;">${r.cli}</td>
+      <td>${ce}${r.nrocomp?`<div style="font-size:10px;color:var(--blue);font-family:monospace;margin-top:2px;">N° ${r.nrocomp}</div>`:''}</td>
+      <td>${tc}${r.franquicia?'<span style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:20px;font-size:10px;background:#FAEEDA;color:#633806;">Franq.</span>':''}</td>
+      <td style="font-size:12px;">${r.con?`${r.con}${r.rel?' <span style="color:var(--text3);">('+r.rel+')</span>':''}`:'—'}</td>
+      <td style="color:var(--text2);font-size:12px;">${r.prod||'—'}</td>
+      <td>${fmt$(r.monto)}</td>
+      <td style="color:#3B6D11;font-weight:500;">${fmt$(r.hon)}</td>
+      <td><span class="badge ${BC[r.estado]||'b-ing'}">${r.estado}</span></td>
+      <td style="${vs}font-size:12px;">${vt}</td>
+      <td style="font-size:12px;color:var(--text2);max-width:140px;" title="${r.obs||''}">${obsShort}</td>
+      <td style="display:flex;gap:3px;white-space:nowrap;">
+        <button class="ab" onclick="openModal(${ri})">Editar</button>
+        <button class="ab" onclick="useInEscrito(${ri})">Escrito</button>
+        <button class="ab ab-d" onclick="delRec(${ri})">Elim.</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+function updateStats() {
+  document.getElementById('st-t').textContent=reclamos.filter(r=>r.estado!=='Cerrado'&&r.estado!=='Rechazado').length;
+  document.getElementById('st-tr').textContent=reclamos.filter(r=>r.estado==='En trámite').length;
+  document.getElementById('st-o').textContent=reclamos.filter(r=>r.estado==='Oferta realizada').length;
+  document.getElementById('st-u').textContent=reclamos.filter(r=>r.estado==='Urgente').length;
+}
+function openModal(idx) {
+  editIdx=idx!==undefined?idx:null;
+  document.getElementById('mtitle').textContent=editIdx!==null?'Editar reclamo':'Nuevo reclamo';
+  refreshCompList();
+  const fs=['cli','comp','nrocomp','con','rel','tel','mail','prod','monto','hon','hon_fecha','obs'];
+  const chks=['franquicia'];
+  const ds=['fec','venc'];
+  if(editIdx!==null) {
+    const r=reclamos[editIdx];
+    fs.forEach(f=>{const e=document.getElementById('f-'+f);if(e)e.value=r[f]||'';});
+    ds.forEach(f=>{const e=document.getElementById('f-'+f);if(e)e.value=r[f]||'';});
+    chks.forEach(f=>{const e=document.getElementById('f-'+f);if(e)e.checked=!!r[f];});
+    ['tipo','est'].forEach(f=>{
+      const el=document.getElementById('f-'+f);
+      if(!el) return;
+      const val=r[f]||'';
+      const match=Array.from(el.options).find(o=>o.value===val||o.text===val);
+      if(match) el.value=match.value;
+      else el.selectedIndex=0;
+    });
+  } else {
+    [...fs,...ds].forEach(f=>{const e=document.getElementById('f-'+f);if(e)e.value='';});
+    document.getElementById('f-tipo').selectedIndex=0;
+    document.getElementById('f-est').selectedIndex=0;
+    document.getElementById('f-franquicia').checked=false;
+  }
+  document.getElementById('modal-r').classList.add('open');
+}
+function refreshCompList() {
+  const dl=document.getElementById('comp-list');
+  if(!dl) return;
+  dl.innerHTML='';
+  companias.forEach(c=>{const o=document.createElement('option');o.value=c.nombre;dl.appendChild(o);});
+}
+function refreshCompSel(id) { refreshCompList(); }
+function saveReclamo() {
+  const compVal=document.getElementById('f-comp').value.trim();
+  if(compVal && !companias.find(c=>c.nombre===compVal)){
+    companias.push({nombre:compVal,notas:''});
+    renderComps(); refreshCompList();
+  }
+  const r={
+    exp:editIdx!==null?reclamos[editIdx].exp:'EXP-'+String(expCnt++).padStart(4,'0'),
+    cli:document.getElementById('f-cli').value||'(sin nombre)',
+    comp:compVal,
+    nrocomp:document.getElementById('f-nrocomp').value,
+    con:document.getElementById('f-con').value,
+    rel:document.getElementById('f-rel').value,
+    tel:document.getElementById('f-tel').value,
+    mail:document.getElementById('f-mail').value,
+    prod:document.getElementById('f-prod').value,
+    franquicia:document.getElementById('f-franquicia').checked,
+    tipo:document.getElementById('f-tipo').value,
+    estado:document.getElementById('f-est').value,
+    monto:document.getElementById('f-monto').value,
+    hon:document.getElementById('f-hon').value,
+    hon_fecha:(editIdx!==null&&reclamos[editIdx]?reclamos[editIdx].hon_fecha:''),
+    fec:document.getElementById('f-fec').value,
+    venc:document.getElementById('f-venc').value,
+    obs:document.getElementById('f-obs').value
+  };
+  if(editIdx!==null) reclamos[editIdx]=r; else reclamos.push(r);
+  close2('modal-r'); renderTable(); updateStats(); guardar();
+}
+function delRec(i) { if(confirm('¿Eliminar este reclamo?')){ reclamos.splice(i,1); renderTable(); updateStats(); guardar(); } }
+
+// ===================== CALENDARIO =====================
+function calMove(d) {
+  if(d===0){calYear=new Date().getFullYear();calMonth=new Date().getMonth();}
+  else{calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}}
+  renderCal();
+}
+function renderCal() {
+  const t=today();
+  const meses=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  document.getElementById('cal-label').textContent=meses[calMonth]+' '+calYear;
+  const first=new Date(calYear,calMonth,1).getDay();
+  const dias=new Date(calYear,calMonth+1,0).getDate();
+  const offset=first===0?6:first-1;
+  const evMap={};
+  reclamos.forEach(r=>{
+    if(r.venc&&r.estado!=='Cerrado'){
+      const [y,m,d]=r.venc.split('-');
+      if(parseInt(y)===calYear&&parseInt(m)===calMonth+1){
+        const dd=parseInt(d); if(!evMap[dd])evMap[dd]=[]; evMap[dd].push(r);
+      }
+    }
+  });
+  // Alertas 7 días
+  const urg=reclamos.filter(r=>r.venc&&r.venc>=t&&r.venc<=addDays(t,7)&&r.estado!=='Cerrado');
+  const ab=document.getElementById('alert-bar');
+  if(urg.length){
+    ab.classList.add('show');
+    document.getElementById('alert-list').innerHTML=urg.sort((a,b)=>a.venc>b.venc?1:-1)
+      .map(r=>`<div class="alert-item">${r.venc} — <strong>${r.cli}</strong> · ${r.comp||'s/compañía'} · <span class="badge ${BC[r.estado]||'b-ing'}">${r.estado}</span></div>`).join('');
+  } else ab.classList.remove('show');
+
+  const days=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  let html=days.map(d=>`<div class="cal-dow">${d}</div>`).join('');
+  for(let i=0;i<offset;i++) html+=`<div class="cal-day other"></div>`;
+  for(let d=1;d<=dias;d++){
+    const ds=calYear+'-'+String(calMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isT=ds===t; const evs=evMap[d]||[]; const hasEv=evs.length>0;
+    const evHtml=evs.slice(0,2).map(r=>{
+      let cls='ev-ok';
+      if(r.venc<t)cls='ev-urg'; else if(r.venc<=addDays(t,5))cls='ev-prox';
+      return `<div class="cal-ev ${cls}">${r.cli.split(' ')[0]}</div>`;
+    }).join('')+(evs.length>2?`<div class="cal-ev ev-ok">+${evs.length-2}</div>`:'');
+    const idxs=evs.map(r=>reclamos.indexOf(r));
+    html+=`<div class="cal-day${isT?' today':''}${hasEv?' has-ev':''}" ${hasEv?`onclick="verDia('${ds}',[${idxs}])"`:''}>
+      <div class="cal-dn">${d}</div>${evHtml}</div>`;
+  }
+  document.getElementById('cal-grid').innerHTML=html;
+}
+function verDia(ds,idxs){
+  document.getElementById('ev-title').textContent='Vencimientos: '+ds;
+  document.getElementById('ev-body').innerHTML=idxs.map(i=>{
+    const r=reclamos[i];
+    return `<div style="padding:10px 0;border-bottom:0.5px solid var(--border);">
+      <div style="font-weight:600;font-size:13px;">${r.cli} <span class="badge ${BC[r.estado]||'b-ing'}" style="margin-left:6px;">${r.estado}</span></div>
+      <div style="font-size:12px;color:var(--text2);margin-top:3px;">${r.comp||'Sin compañía'} — ${r.tipo}</div>
+      ${r.obs?`<div style="font-size:12px;color:var(--text2);margin-top:2px;font-style:italic;">${r.obs}</div>`:''}
+      <div style="display:flex;gap:5px;margin-top:8px;">
+        <button class="ab" onclick="close2('modal-ev');openModal(${i})">Editar</button>
+        <button class="ab" onclick="close2('modal-ev');useInEscrito(${i})">Escrito</button>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('modal-ev').classList.add('open');
+}
+
+// ===================== MENSAJES =====================
+// ===================== MENSAJES =====================
+const BUNDLED_WPP=[
+  {title:'Solicitud de documentación inicial',canal:'wpp',subject:'',body:'Hola {nombre}! \uD83D\uDC4B Te escribo de parte del estudio para avisarte que ya iniciamos la gestión de tu reclamo ante {compania}.\n\nPara poder avanzar necesito que me hagas llegar los siguientes documentos:\n\n\uD83D\uDCC4 DNI (frente y dorso)\n\uD83D\uDE97 Título del vehículo / Cédula verde\n\uD83D\uDCCB Denuncia policial (si la realizaste)\n\uD83D\uDCF8 Fotos del daño\n\nPodés enviármelos por este mismo WhatsApp. Cualquier duda, avisame. ¡Gracias!'},
+  {title:'Seguimiento — esperando respuesta',canal:'wpp',subject:'',body:'Hola {nombre}! Te cuento brevemente cómo va tu expediente.\n\nYa presentamos el reclamo ante {compania} y estamos esperando respuesta de su parte. Estas gestiones suelen demorar entre 15 y 30 días hábiles.\n\nTe voy a avisar apenas tengamos novedades. Cualquier consulta no dudes en escribirme. \uD83D\uDE4C'},
+  {title:'Aviso de oferta recibida',canal:'wpp',subject:'',body:'Hola {nombre}! Buenas noticias — {compania} realizó una oferta de liquidación por tu siniestro.\n\nEl monto ofrecido es de {monto}.\n\nNecesito que me digas si querés aceptarla o si preferimos seguir negociando. Podemos hablar por este medio o coordinamos una llamada. ¡Quedamos a tu disposición!'},
+  {title:'Documentación faltante — recordatorio',canal:'wpp',subject:'',body:'Hola {nombre}! Te recuerdo que para continuar con tu reclamo todavía necesitamos que nos envíes:\n\n⚠️ [COMPLETAR DOCUMENTACIÓN FALTANTE]\n\nSin esa documentación no podemos avanzar. Avisame si tenés algún inconveniente. ¡Gracias!'},
+  {title:'Citación para firma',canal:'wpp',subject:'',body:'Hola {nombre}! Necesito pedirte que te acerques al estudio para firmar documentación relacionada con tu reclamo ante {compania}.\n\nPodés venir cualquier día hábil de [HORARIO]. Si querés coordinar un horario puntual, avisame y te reservo un turno.\n\n¡Gracias!'},
+];
+const BUNDLED_MAIL=[
+  {title:'Presentación de patrocinio',canal:'mail',subject:'Presentación letrada — Siniestro N° {nsiniestro} — {nombre}',body:'Estimado/a,\n\nPor medio de la presente me dirijo a Ud. en mi carácter de letrada patrocinante de {nombre}, DNI [COMPLETAR], a efectos de comunicar mi intervención profesional en el trámite del siniestro individualizado en el asunto.\n\nEn tal virtud, solicito tenga a bien:\n1. Tomar nota de mi carácter y datos de contacto.\n2. Remitir toda comunicación futura a mi correo electrónico.\n3. Informar el estado actual del expediente.\n\nQuedo a disposición para cualquier consulta.\n\nSaludos cordiales,\n[TU NOMBRE]\nAbogada — Mat. [MATRÍCULA]\n[TELÉFONO] | [MAIL]'},
+  {title:'Solicitud de liquidación urgente',canal:'mail',subject:'Solicitud de liquidación urgente — Siniestro N° {nsiniestro}',body:'Estimado/a,\n\nEn nombre de mi mandante {nombre}, me dirijo a Ud. a fin de solicitar con carácter urgente la liquidación del siniestro N° {nsiniestro}, habiendo transcurrido [X días] desde la presentación del reclamo sin obtener respuesta de esa compañía.\n\nAguardo respuesta en el plazo de 5 días hábiles.\n\nSaludos cordiales,\n[TU NOMBRE]\nAbogada — Mat. [MATRÍCULA]'},
+  {title:'Impugnación de oferta',canal:'mail',subject:'Impugnación de oferta — Siniestro N° {nsiniestro} — {nombre}',body:'Estimado/a,\n\nMe dirijo a Ud. en representación de {nombre} a fin de impugnar formalmente la oferta efectuada en la suma de $[MONTO OFRECIDO], por resultar manifiestamente insuficiente.\n\nLos daños acreditados ascienden a la suma de $[MONTO REAL], conforme surge de [PERICIA / PRESUPUESTO adjunto].\n\nSolicito se reconsidere la propuesta a la brevedad.\n\nSaludos cordiales,\n[TU NOMBRE]\nAbogada — Mat. [MATRÍCULA]'},
+  {title:'Solicitud de estado de expediente',canal:'mail',subject:'Estado del expediente — Siniestro N° {nsiniestro}',body:'Estimado/a,\n\nMe dirijo a Ud. a fin de solicitar informe el estado actual de tramitación del siniestro N° {nsiniestro} — {nombre}.\n\nAguardo respuesta en el término de 48 horas hábiles.\n\nSaludos cordiales,\n[TU NOMBRE]\nAbogada — Mat. [MATRÍCULA]'},
+  {title:'Presentación de documentación adicional',canal:'mail',subject:'Documentación adicional — Siniestro N° {nsiniestro} — {nombre}',body:'Estimado/a,\n\nEn el marco del trámite del siniestro, adjunto la siguiente documentación adicional solicitada:\n\n- [DOCUMENTO 1]\n- [DOCUMENTO 2]\n\nQuedo a disposición para cualquier consulta.\n\nSaludos cordiales,\n[TU NOMBRE]\nAbogada — Mat. [MATRÍCULA]'},
+];
+
+// userMsgs: loaded from localStorage, starts as copy of bundled
+let userMsgs=[];
+function loadUserMsgs(){
+  try{
+    const s=localStorage.getItem('lt_msgs');
+    if(s) userMsgs=JSON.parse(s);
+    else userMsgs=[...BUNDLED_WPP,...BUNDLED_MAIL];
+  }catch(e){ userMsgs=[...BUNDLED_WPP,...BUNDLED_MAIL]; }
+}
+function saveUserMsgs(){ try{localStorage.setItem('lt_msgs',JSON.stringify(userMsgs));}catch(e){} }
+
+let curMsgChannel='wpp';
+function switchMsgTab(ch,btn){
+  curMsgChannel=ch;
+  document.querySelectorAll('.msg-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('msg-wpp').style.display=ch==='wpp'?'block':'none';
+  document.getElementById('msg-mail').style.display=ch==='mail'?'block':'none';
+}
+function renderMsgs(){
+  const wpp=userMsgs.filter(m=>m.canal==='wpp');
+  const mail=userMsgs.filter(m=>m.canal==='mail');
+  renderMsgList('msg-wpp',wpp,'wpp');
+  renderMsgList('msg-mail',mail,'mail');
+}
+function renderMsgList(id,msgs,ch){
+  if(!msgs.length){
+    document.getElementById(id).innerHTML='<div style="text-align:center;padding:32px;color:var(--text2);font-size:13px;">No hay modelos todavía. Hacé clic en "+ Nuevo modelo".</div>';
+    return;
+  }
+  document.getElementById(id).innerHTML=msgs.map((m)=>{
+    const gi=userMsgs.indexOf(m);
+    return '<div class="msg-card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+      +'<div class="msg-title" style="margin:0;">'+m.title+'</div>'
+      +'<div style="display:flex;gap:5px;">'
+      +'<button class="ab" onclick="openEditMsgModal('+gi+')">Editar</button>'
+      +'<button class="ab ab-d" onclick="deleteMsgModel('+gi+')">×</button>'
+      +'</div></div>'
+      +'<div class="msg-preview">'+m.body.substring(0,200)+(m.body.length>200?'…':'')+'</div>'
+      +'<div style="display:flex;gap:7px;flex-wrap:wrap;">'
+      +'<button class="bs" style="font-size:12px;padding:5px 11px;" onclick="openMsgModal('+gi+')">Personalizar y usar ↗</button>'
+      +'<button class="bs" style="font-size:12px;padding:5px 11px;" onclick="copyRawMsg('+gi+')">Copiar genérico</button>'
+      +'</div></div>';
+  }).join('');
+}
+
+// Open modal to USE (personalize + send)
+function openMsgModal(gi){
+  const m=userMsgs[gi];
+  curMsgTemplate=m.body; curMsgType=m.canal; curMsgSubject=m.subject||'';
+  document.getElementById('msg-mt').textContent=(m.canal==='wpp'?'WhatsApp: ':'Mail: ')+m.title;
+  document.getElementById('msg-wa-btn').style.display=m.canal==='wpp'?'inline-flex':'none';
+  document.getElementById('msg-mail-btn').style.display=m.canal==='mail'?'inline-flex':'none';
+  const sel=document.getElementById('msg-exp-sel');
+  sel.innerHTML='<option value="">Sin expediente (genérico)</option>';
+  reclamos.forEach((r,ri)=>{const o=document.createElement('option');o.value=ri;o.textContent=r.exp+' — '+r.cli;sel.appendChild(o);});
+  document.getElementById('msg-texto').value=curMsgTemplate;
+  document.getElementById('modal-msg').classList.add('open');
+}
+
+// Open modal to EDIT a model
+let editMsgIdx=null;
+function openEditMsgModal(gi){
+  editMsgIdx=gi;
+  const m=gi!==null?userMsgs[gi]:{title:'',canal:curMsgChannel,subject:'',body:''};
+  document.getElementById('em-title').value=m.title;
+  document.getElementById('em-canal').value=m.canal;
+  document.getElementById('em-subject-wrap').style.display=m.canal==='mail'?'block':'none';
+  document.getElementById('em-subject').value=m.subject||'';
+  document.getElementById('em-body').value=m.body;
+  document.getElementById('em-modal-title').textContent=gi!==null?'Editar modelo':'Nuevo modelo';
+  document.getElementById('modal-edit-msg').classList.add('open');
+}
+function saveEditMsg(){
+  const title=document.getElementById('em-title').value.trim();
+  const canal=document.getElementById('em-canal').value;
+  const subject=document.getElementById('em-subject').value.trim();
+  const body=document.getElementById('em-body').value;
+  if(!title){alert('Ingresá un título para el modelo.');return;}
+  if(!body){alert('El mensaje no puede estar vacío.');return;}
+  const m={title,canal,subject,body};
+  if(editMsgIdx!==null) userMsgs[editMsgIdx]=m;
+  else userMsgs.push(m);
+  saveUserMsgs();
+  close2('modal-edit-msg');
+  renderMsgs();
+}
+function deleteMsgModel(gi){
+  if(!confirm('¿Eliminar el modelo "'+userMsgs[gi].title+'"?')) return;
+  userMsgs.splice(gi,1);
+  saveUserMsgs();
+  renderMsgs();
+}
+function personalizarMsg(){
+  const i=document.getElementById('msg-exp-sel').value;
+  if(i===''){document.getElementById('msg-texto').value=curMsgTemplate;return;}
+  const r=reclamos[parseInt(i)];
+  let txt=curMsgTemplate
+    .replace(/\{nombre\}/g,r.cli)
+    .replace(/\{compania\}/g,r.comp||'la compañía')
+    .replace(/\{nsiniestro\}/g,r.nrocomp||r.exp)
+    .replace(/\{monto\}/g,r.monto?'$'+Number(r.monto).toLocaleString('es-AR'):'a determinar');
+  document.getElementById('msg-texto').value=txt;
+}
+function copyMsg(){
+  navigator.clipboard.writeText(document.getElementById('msg-texto').value).then(()=>{
+    const b=event.target; b.textContent='¡Copiado!'; setTimeout(()=>b.textContent='Copiar texto',1500);
+  });
+}
+function copyRawMsg(gi){
+  navigator.clipboard.writeText(userMsgs[gi].body).then(()=>{
+    const b=event.target; b.textContent='¡Copiado!'; setTimeout(()=>b.textContent='Copiar genérico',1500);
+  });
+}
+function abrirWA(){
+  const txt=encodeURIComponent(document.getElementById('msg-texto').value);
+  window.open('https://wa.me/?text='+txt,'_blank');
+}
+function abrirMail(){
+  const i=document.getElementById('msg-exp-sel').value;
+  const r=i!==''?reclamos[parseInt(i)]:null;
+  let subj=curMsgSubject;
+  if(r) subj=subj.replace(/\{nombre\}/g,r.cli).replace(/\{nsiniestro\}/g,r.nrocomp||r.exp);
+  const mail=r&&r.mail?r.mail:'';
+  const body=encodeURIComponent(document.getElementById('msg-texto').value);
+  window.open('mailto:'+mail+'?subject='+encodeURIComponent(subj)+'&body='+body,'_blank');
+}
+
+// ===================== DIRECTORIO =====================
+function renderDirectorio(){
+  const q=(document.getElementById('sd')||{value:''}).value.toLowerCase();
+  const grid=document.getElementById('dir-grid');
+  if(!grid) return;
+  const list=companias.filter(c=>!q||
+    c.nombre.toLowerCase().includes(q)||
+    (c.notas||'').toLowerCase().includes(q)||
+    (c.contactos||[]).some(ct=>(ct.nombre||'').toLowerCase().includes(q)||(ct.mail||'').toLowerCase().includes(q)||(ct.obs||'').toLowerCase().includes(q))
+  );
+  if(!list.length){
+    grid.innerHTML='<div style="text-align:center;padding:40px;color:var(--text2);">Sin resultados.</div>';
+    return;
+  }
+  const cards=list.map(c=>{
+    const ci=companias.indexOf(c);
+    const obsComp=c.notas
+      ?'<div style="font-size:12px;padding:6px 10px;border-radius:8px;margin-bottom:10px;background:var(--amber-bg);color:var(--amber-text);">⚠ '+c.notas+'</div>'
+      :'';
+    const cuitEl=c.cuit
+      ?'<div style="font-size:11px;color:var(--text2);margin-bottom:6px;">CUIT: '+c.cuit+'</div>'
+      :'';
+    const cts=(c.contactos||[]).filter(ct=>ct.mail||ct.nombre).map(ct=>{
+      const obsLow=(ct.obs||'').toLowerCase();
+      const obsColor=obsLow.includes('inutil')||obsLow.includes('idiota')||obsLow.includes('cagada')
+        ?'background:#FCEBEB;color:#791F1F;'
+        :obsLow.includes('util')||obsLow.includes('bien')||obsLow.includes('resuelve')
+        ?'background:#EAF3DE;color:#27500A;'
+        :'background:#FAEEDA;color:#633806;';
+      const obsTag=ct.obs
+        ?'<span style="'+obsColor+'display:inline-block;padding:1px 7px;border-radius:20px;font-size:10.5px;margin-left:5px;">'+ct.obs+'</span>'
+        :'';
+      const mailEl=ct.mail
+        ?'<div><a href="mailto:'+ct.mail+'" style="color:var(--blue);font-size:12px;text-decoration:none;">'+ct.mail+'</a></div>'
+        :'';
+      return '<div class="dir-ct-row"><div style="flex:1;"><div style="font-weight:500;font-size:13px;">'+(ct.nombre||'—')+obsTag+'</div>'+mailEl+'</div></div>';
+    }).join('');
+    const nr=reclamos.filter(r=>r.comp===c.nombre&&r.estado!=='Cerrado').length;
+    const nrEl='<span style="font-size:11px;color:var(--text2);white-space:nowrap;margin-left:8px;">'+nr+' activo'+(nr!==1?'s':'')+'</span>';
+    const btnEdit='<button class="ab" style="font-size:11px;" onclick="openDirModal('+ci+')">Editar</button>';
+    const btnDel='<button class="ab ab-d" style="font-size:11px;" onclick="dirDelComp('+ci+')">×</button>';
+    return '<div class="dir-card">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px;">'
+      +'<div style="font-size:15px;font-weight:700;letter-spacing:-0.3px;">'+c.nombre+'</div>'
+      +'<div style="display:flex;align-items:center;gap:4px;">'+nrEl+btnEdit+btnDel+'</div>'
+      +'</div>'
+      +cuitEl+obsComp
+      +(cts||'<div style="font-size:12px;color:var(--text3);padding:4px 0;">Sin contactos registrados.</div>')
+      +'</div>';
+  }).join('');
+  grid.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;">'+cards+'</div>';
+}
+
+// ===================== COMPAÑIAS =====================
+function renderComps(){
+  const q=(document.getElementById('sc')||{value:''}).value.toLowerCase();
+  const grid=document.getElementById('comp-grid');
+  const empty=document.getElementById('comp-empty');
+  const list=companias.filter(c=>!q||c.nombre.toLowerCase().includes(q));
+  if(!list.length){grid.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  grid.innerHTML=list.map(c=>{
+    const ci=companias.indexOf(c);
+    const nr=reclamos.filter(r=>r.comp===c.nombre&&r.estado!=='Cerrado').length;
+    const recs=reclamos.filter(r=>r.comp===c.nombre&&r.estado!=='Cerrado');
+    const recHtml=recs.slice(0,3).map(r=>`<div style="font-size:12px;padding:4px 0;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-family:monospace;font-size:10px;color:var(--text3);">${r.exp}</span><span>${r.cli}</span><span class="badge ${BC[r.estado]||'b-ing'}">${r.estado}</span></div>`).join('');
+    return `<div class="comp-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div class="comp-name">${c.nombre}</div>
+        <div style="display:flex;gap:4px;">
+          <button class="ab" onclick="editComp(${ci})">Editar</button>
+          <button class="ab ab-d" onclick="delComp(${ci})">×</button>
+        </div>
+      </div>
+      ${c.notas?`<div style="font-size:12px;color:var(--text2);margin-bottom:8px;font-style:italic;">${c.notas}</div>`:''}
+      <div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:4px;">${nr} reclamo${nr!==1?'s':''} activo${nr!==1?'s':''}</div>
+      ${recHtml}${recs.length>3?`<div style="font-size:11px;color:var(--text2);padding-top:4px;">+${recs.length-3} más</div>`:''}
+    </div>`;
+  }).join('');
+}
+function verComp(nombre){
+  // just scroll to companias tab - detail is now shown inline on the card
+  go('companias',document.querySelectorAll('.nb')[3]);
+  const sc=document.getElementById('sc'); if(sc){sc.value=nombre;renderComps();}
+}
+function openCompModal(idx){
+  editCompIdx=idx!==undefined?idx:null;
+  document.getElementById('ctitle').textContent=editCompIdx!==null?'Editar compañia':'Nueva compañia';
+  document.getElementById('c-nom').value=editCompIdx!==null?companias[editCompIdx].nombre:'';
+  document.getElementById('c-notas').value=editCompIdx!==null?(companias[editCompIdx].notas||''):'';
+  document.getElementById('modal-c').classList.add('open');
+}
+function editComp(i){openCompModal(i);}
+function saveComp(){
+  const nom=document.getElementById('c-nom').value.trim();
+  if(!nom){alert('Ingresá el nombre de la compañía.');return;}
+  const c={nombre:nom,notas:document.getElementById('c-notas').value.trim()};
+  if(editCompIdx!==null) companias[editCompIdx]=c; else companias.push(c);
+  close2('modal-c'); renderComps(); refreshCompList(); guardar();
+}
+function delComp(i){if(confirm('¿Eliminar compañía?')){companias.splice(i,1);renderComps();refreshCompSel('f-comp');guardar();}}
+function importXl(input){
+  const file=input.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const sh=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(sh,{defval:''});
+    let imp=0;
+    rows.forEach(row=>{
+      const nom=(row['Compañía']||row['Compania']||row['Nombre']||row['nombre']||'').toString().trim();
+      if(!nom) return;
+      const ex=companias.find(c=>c.nombre===nom);
+      if(!ex){companias.push({nombre:nom,notas:''});imp++;}
+    });
+    input.value=''; renderComps(); refreshCompList(); guardar();
+    alert(`Importación completada. ${imp} compañía(s) nueva(s) agregada(s).`);
+  };
+  reader.readAsBinaryString(file);
+}
+
+// ===================== ESCRITO IA + PDF =====================
+function refreshEscSel(){
+  const s=document.getElementById('esc-exp');
+  s.innerHTML='<option value="">Manual / desde PDF...</option>';
+  reclamos.forEach((r,i)=>{const o=document.createElement('option');o.value=i;o.textContent=r.exp+' — '+r.cli;s.appendChild(o);});
+}
+function loadFromExpFull(i){
+  const r=reclamos[parseInt(i)];
+  document.getElementById('e-cli').value=r.cli||'';
+  document.getElementById('e-comp').value=r.comp||'';
+  document.getElementById('e-nsin').value=r.nrocomp||r.exp||'';
+  document.getElementById('e-fec').value=r.fec||'';
+  document.getElementById('e-tipo').value=r.tipo&&r.tipo.toLowerCase().includes('les')?'lesiones':'daño material';
+  document.getElementById('e-monto').value=r.monto||'';
+  document.getElementById('e-desc').value=r.obs||'';
+  document.getElementById('e-dni').value='';
+  document.getElementById('e-domicilio').value='';
+  document.getElementById('e-marca').value='';
+  document.getElementById('e-modelo').value='';
+  document.getElementById('e-patente').value='';
+  document.getElementById('e-franquicia').checked=false;
+}
+function loadFromExp(){
+  const i=document.getElementById('esc-exp').value; if(i==='') return;
+  loadFromExpFull(parseInt(i));
+}
+function useInEscrito(i){
+  go('escrito',document.querySelectorAll('.nb')[5]);
+  refreshEscSel();
+  document.getElementById('esc-exp').value=i;
+  loadFromExpFull(i);
+}
+function handleDrop(ev){
+  ev.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag');
+  const f=ev.dataTransfer.files[0];
+  if(f&&f.type==='application/pdf') processPdf(f);
+  else alert('Por favor arrastrá un archivo PDF.');
+}
+function genEscrito(){
+  const cli=document.getElementById('e-cli').value.trim();
+  const comp=document.getElementById('e-comp').value.trim();
+  if(!cli||!comp){alert('Complet\u00e1 al menos el nombre del cliente y la compa\u00f1\u00eda.');return;}
+  const dni=document.getElementById('e-dni').value.trim()||'[DNI]';
+  const domicilio=document.getElementById('e-domicilio').value.trim()||'[DOMICILIO CLIENTE]';
+  const nsin=document.getElementById('e-nsin').value.trim()||'[N\u00b0 A ASIGNAR]';
+  const desc=document.getElementById('e-desc').value.trim()||'[RELATO DEL HECHO]';
+  const marca=document.getElementById('e-marca').value.trim()||'[MARCA]';
+  const modelo=document.getElementById('e-modelo').value.trim()||'[MODELO]';
+  const patente=document.getElementById('e-patente').value.trim()||'[PATENTE]';
+  const esFranquicia=document.getElementById('e-franquicia').checked;
+  const montoRaw=document.getElementById('e-monto').value.trim().replace(/[^0-9]/g,'');
+  const montoFmt=montoRaw?'pesos '+Number(montoRaw).toLocaleString('es-AR'):'[MONTO]';
+  const fec=document.getElementById('e-fec').value;
+  const fecFmt=fec?new Date(fec+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'}):'[FECHA DEL SINIESTRO]';
+  const hoy=new Date().toLocaleDateString('es-AR',{day:'numeric',month:'long',year:'numeric'});
+
+  const lines=[];
+  lines.push('C\u00f3rdoba, '+hoy);
+  lines.push('');
+  lines.push('SE\u00d1ORES');
+  lines.push(comp.toUpperCase());
+  lines.push('S / D');
+  lines.push('');
+  lines.push('-------------------------------------------------------');
+  lines.push('REF.: PATROCINIO LETRADO \u2014 RECLAMO ADMINISTRATIVO');
+  lines.push('      Siniestro N\u00b0 '+nsin);
+  lines.push('-------------------------------------------------------');
+  lines.push('');
+  lines.push('La Dra. MARIA AZUL CASTELLANOS, Abogada, Mat. Prof. 1-44491, con domicilio constituido en Celso Barrios 1502, C\u00f3rdoba Capital, y casilla de correo electr\u00f3nico RECLAMOSCASTELLANOS@GMAIL.COM, en mi car\u00e1cter de letrada patrocinante de '+cli.toUpperCase()+', DNI N\u00b0 '+dni+', con domicilio en '+domicilio+', me dirijo a Ud. a fin de exponer:');
+  lines.push('');
+  lines.push('I. OBJETO');
+  lines.push('');
+  lines.push('Que vengo a interponer formal reclamo administrativo por da\u00f1os materiales ante esa Compa\u00f1\u00eda aseguradora, solicitando la reparaci\u00f3n integral de los da\u00f1os sufridos por mi mandante como consecuencia del siniestro vial ocurrido en fecha '+fecFmt+'.');
+  lines.push('');
+  lines.push('II. HECHOS');
+  lines.push('');
+  lines.push('Con fecha '+fecFmt+', '+desc+'. En el referido episodio vial se vio involucrado el rodado marca '+marca+', modelo '+modelo+', dominio '+patente+', de propiedad de mi mandante, el cual result\u00f3 con da\u00f1os materiales producto del impacto.');
+  if(esFranquicia){
+    lines.push('');
+    lines.push('Hago constar que el monto reclamado corresponde a la franquicia a cargo del tercero responsable, conforme las condiciones de la p\u00f3liza, resultando la aseguradora obligada a su pago en virtud de la acci\u00f3n directa que asiste a esta parte (art. 118, Ley 17.418).');
+  }
+  lines.push('');
+  lines.push('III. MONTO RECLAMADO');
+  lines.push('');
+  lines.push('Los da\u00f1os materiales sufridos ascienden a la suma de '+montoFmt+', correspondiente a la reparaci\u00f3n del rodado marca '+marca+', modelo '+modelo+', dominio '+patente+', o su valor venal seg\u00fan corresponda.');
+  lines.push('');
+  lines.push('Dicho monto se fija con car\u00e1cter provisional, reserv\u00e1ndome el derecho de ampliarlo conforme surja del peritaje t\u00e9cnico correspondiente.');
+  lines.push('');
+  lines.push('IV. PETITORIO');
+  lines.push('');
+  lines.push('Por lo expuesto, solicito:');
+  lines.push('1. Se tenga por presentada a la suscripta en el car\u00e1cter invocado.');
+  lines.push('2. Se proceda a la tramitaci\u00f3n del presente reclamo bajo el N\u00b0 '+nsin+'.');
+  lines.push('3. Se liquide y abone el monto reclamado en el plazo legal.');
+  lines.push('4. Se dirijan todas las comunicaciones y notificaciones relacionadas con el presente reclamo exclusivamente a la letrada patrocinante a la casilla de correo electr\u00f3nico: RECLAMOSCASTELLANOS@GMAIL.COM');
+  lines.push('');
+  lines.push('Proveer de conformidad.');
+  lines.push('');
+  lines.push('');
+  lines.push('_________________________________');
+  lines.push('Dra. MARIA AZUL CASTELLANOS');
+  lines.push('Abogada \u2014 Mat. Prof. 1-44491');
+  lines.push('Celso Barrios 1502, C\u00f3rdoba Capital');
+  lines.push('RECLAMOSCASTELLANOS@GMAIL.COM');
+  lines.push('');
+  lines.push('');
+  lines.push('_________________________________');
+  lines.push(cli.toUpperCase());
+  lines.push('DNI N\u00b0 '+dni);
+  lines.push('Firma del patrocinado');
+
+  document.getElementById('esc-out').value=lines.join('\n');
+}
+function copyEscrito(){
+  const txt=document.getElementById('esc-out').value;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const b=event.target; b.textContent='¡Copiado!'; setTimeout(()=>b.textContent='Copiar',1500);
+  });
+}
+function printEscrito(){
+  const w=window.open('','_blank');
+  const txt=document.getElementById('esc-out').value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Escrito de Patrocinio</title><style>body{font-family:Georgia,serif;font-size:13.5px;line-height:1.85;margin:2.5cm 3cm;color:#111;}pre{white-space:pre-wrap;font-family:Georgia,serif;}</style></head><body><pre>'+txt+'<\/pre><\/body><\/html>');
+  w.document.close(); w.print();
+}
+
+
+// ===================== DIRECTORIO EDICION =====================
+let dirEditIdx=null;
+function openDirModal(idx){
+  dirEditIdx=idx!==undefined?idx:null;
+  document.getElementById('dir-modal-title').textContent=dirEditIdx!==null?'Editar compañía':'Nueva compañía';
+  const c=dirEditIdx!==null?companias[dirEditIdx]:{};
+  document.getElementById('dir-nom').value=c.nombre||'';
+  document.getElementById('dir-cuit').value=c.cuit||'';
+  document.getElementById('dir-notas').value=c.notas||'';
+  const form=document.getElementById('dir-ct-form');
+  form.innerHTML='';
+  const cts=c.contactos||[];
+  if(cts.length) cts.forEach(ct=>dirAddCt(ct));
+  else dirAddCt();
+  document.getElementById('modal-dir').classList.add('open');
+}
+let dirCtCount=0;
+function dirAddCt(d){
+  d=d||{}; dirCtCount++;
+  const div=document.createElement('div');
+  div.style.cssText='border:0.5px solid var(--border);border-radius:var(--radius);padding:10px;margin-bottom:8px;position:relative;';
+  div.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">'
+    +'<div class="fg"><label class="fl">Nombre</label><input class="fi dir-ct-n" placeholder="Nombre del contacto" value="'+(d.nombre||'')+'"/></div>'
+    +'<div class="fg"><label class="fl">Observación</label><input class="fi dir-ct-o" placeholder="Ej: UTIL, INUTIL, RESUELVE..." value="'+(d.obs||'')+'"/></div>'
+    +'<div class="fg full"><label class="fl">Mail</label><input class="fi dir-ct-m" placeholder="contacto@compania.com" value="'+(d.mail||'')+'"/></div>'
+    +'</div>'
+    +'<button onclick="this.parentElement.remove()" style="position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;color:var(--text2);font-size:18px;line-height:1;">×</button>';
+  document.getElementById('dir-ct-form').appendChild(div);
+}
+function dirSaveComp(){
+  const nom=document.getElementById('dir-nom').value.trim();
+  if(!nom){alert('Ingresá el nombre de la compañía.');return;}
+  const contactos=[];
+  document.querySelectorAll('#dir-ct-form > div').forEach(div=>{
+    const n=div.querySelector('.dir-ct-n').value.trim();
+    const o=div.querySelector('.dir-ct-o').value.trim();
+    const m=div.querySelector('.dir-ct-m').value.trim();
+    if(n||m) contactos.push({nombre:n,obs:o,mail:m});
+  });
+  const c={
+    nombre:nom,
+    cuit:document.getElementById('dir-cuit').value.trim(),
+    notas:document.getElementById('dir-notas').value.trim(),
+    contactos
+  };
+  if(dirEditIdx!==null) companias[dirEditIdx]=c;
+  else companias.push(c);
+  guardar();
+  close2('modal-dir');
+  renderDirectorio();
+  renderComps();
+  refreshCompList();
+}
+function dirDelComp(i){
+  const nr=reclamos.filter(r=>r.comp===companias[i].nombre&&r.estado!=='Cerrado').length;
+  const msg=nr>0
+    ?'Esta compañía tiene '+nr+' reclamo(s) activo(s). ¿Eliminarla igualmente del directorio?'
+    :'¿Eliminar '+companias[i].nombre+' del directorio?';
+  if(confirm(msg)){companias.splice(i,1);guardar();renderDirectorio();renderComps();refreshCompList();}
+}
+
+
+
+// ===================== ESTADO FILTER DROPDOWN =====================
+function toggleEstadoDropdown(e){
+  e.stopPropagation();
+  const d=document.getElementById('estado-dropdown');
+  d.style.display=d.style.display==='none'?'block':'none';
+}
+function toggleAllEstados(cb){
+  if(cb.checked){
+    document.querySelectorAll('.est-cb').forEach(c=>c.checked=false);
+  }
+  updateEstadoLabel();
+  renderTable();
+}
+function onEstadoCbChange(){
+  const anyChecked=Array.from(document.querySelectorAll('.est-cb')).some(cb=>cb.checked);
+  document.getElementById('est-all').checked=!anyChecked;
+  updateEstadoLabel();
+  renderTable();
+}
+function updateEstadoLabel(){
+  const checked=Array.from(document.querySelectorAll('.est-cb:checked')).map(cb=>cb.value);
+  const lbl=document.getElementById('estado-dropdown-label');
+  if(!checked.length) lbl.textContent='Todos los estados';
+  else if(checked.length===1) lbl.textContent=checked[0];
+  else lbl.textContent=checked.length+' estados';
+}
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('estado-dropdown-wrap');
+  if(wrap&&!wrap.contains(e.target)){
+    const d=document.getElementById('estado-dropdown');
+    if(d) d.style.display='none';
+  }
+});
+
+// ===================== HONORARIOS =====================
+function renderHonorarios(){
+  const cobrados=reclamos.filter(r=>r.estado==='Cerrado'&&r.hon);
+  const pendientes=reclamos.filter(r=>r.estado==='Oferta realizada'&&r.hon);
+
+  const sumCob=cobrados.reduce((s,r)=>s+Number(r.hon||0),0);
+  const sumPend=pendientes.reduce((s,r)=>s+Number(r.hon||0),0);
+  document.getElementById('hon-total-cobrado').textContent='$'+sumCob.toLocaleString('es-AR');
+  document.getElementById('hon-total-pend').textContent='$'+sumPend.toLocaleString('es-AR');
+
+  // Cobrados table
+  const tbCob=document.getElementById('hon-tbody-cobrado');
+  if(!cobrados.length){
+    tbCob.innerHTML='<tr><td colspan="4" class="empty-td">Sin reclamos cerrados con honorarios.</td></tr>';
+  } else {
+    tbCob.innerHTML=cobrados.map(r=>{
+      const ri=reclamos.indexOf(r);
+      return '<tr>'
+        +'<td style="font-size:11px;color:var(--text2);font-family:monospace;">'+r.exp+'</td>'
+        +'<td style="font-weight:500;">'+r.cli+'</td>'
+        +'<td>'+( r.comp||'—')+'</td>'
+        +'<td style="color:#3B6D11;font-weight:600;">$'+Number(r.hon).toLocaleString('es-AR')+'</td>'
+        +'</tr>';
+    }).join('');
+  }
+
+  // Pendientes table
+  const tbPend=document.getElementById('hon-tbody-pend');
+  if(!pendientes.length){
+    tbPend.innerHTML='<tr><td colspan="5" class="empty-td">Sin ofertas realizadas con honorarios.</td></tr>';
+  } else {
+    tbPend.innerHTML=pendientes.map(r=>{
+      const ri=reclamos.indexOf(r);
+      const fechaVal=r.hon_fecha||'';
+      const fechaFmt=fechaVal?new Date(fechaVal+'T12:00:00').toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'}):'';
+      const hoy=new Date().toISOString().slice(0,10);
+      let fechaStyle='';
+      if(fechaVal&&fechaVal<hoy) fechaStyle='color:#A32D2D;font-weight:600;';
+      else if(fechaVal&&fechaVal<=addDays(hoy,15)) fechaStyle='color:#BA7517;font-weight:600;';
+      else if(fechaVal) fechaStyle='color:#3B6D11;';
+      return '<tr>'
+        +'<td style="font-size:11px;color:var(--text2);font-family:monospace;">'+r.exp+'</td>'
+        +'<td style="font-weight:500;">'+r.cli+'</td>'
+        +'<td>'+(r.comp||'—')+'</td>'
+        +'<td style="color:#BA7517;font-weight:600;">$'+Number(r.hon).toLocaleString('es-AR')+'</td>'
+        +'<td>'
+          +'<div style="display:flex;align-items:center;gap:6px;">'
+            +'<input type="date" value="'+fechaVal+'" '
+              +'style="padding:4px 7px;border:0.5px solid var(--border2);border-radius:var(--radius);font-size:12px;background:var(--bg);color:var(--text);'+fechaStyle+'" '
+              +'onchange="guardarFechaHon('+ri+',this.value)" />'
+            +(fechaFmt?'<span style="font-size:11px;'+fechaStyle+'">'+fechaFmt+'</span>':'')
+          +'</div>'
+        +'</td>'
+        +'</tr>';
+    }).join('');
+  }
+}
+
+function guardarFechaHon(idx, val){
+  reclamos[idx].hon_fecha=val;
+  guardar();
+  renderHonorarios();
+}
+
+// ===================== INIT =====================
+const DATA_VERSION='v4-2026';
+const BUNDLED_COMPANIAS=[{"nombre": "LA SEGUNDA", "cuit": "30500017704", "notas": "INSISTIR PARA EL PAGO DE HONORARIOS", "contactos": [{"mail": "gbruschi@lasegunda.com.ar", "nombre": "GERMAN BRUSCHI", "obs": ""}, {"mail": "fmaldonado@lasegunda.com.ar", "nombre": "FERNANDA MALDONADO", "obs": "MALHUMORADA - INUTIL"}]}, {"nombre": "EL NORTE", "cuit": "30500040455", "notas": "DEMORA MUCHISIMO EN PAGAR Y RESOLVER", "contactos": [{"mail": "rmartinez@elnorte.com.ar", "nombre": "ROBERTO MARTINEZ", "obs": "RESUELVE TODO"}, {"mail": "glucco@elnorte.com.ar", "nombre": "GUILLERMO LUCCO", "obs": "INUTIL"}, {"mail": "dcuevas@elnorte.com.ar", "nombre": "DARIO CUEVAS", "obs": "INUTIL"}, {"mail": "jhilzerman@gmail.com", "nombre": "JAVIER HILZERMAN", "obs": "PERITO"}, {"mail": "srodriguez@elnorte.com.ar", "nombre": "SILVINA RODRIGUEZ SORIANO", "obs": "NI IDEA"}]}, {"nombre": "RIVADAVIA", "cuit": "", "notas": "INSISTIR MUCHO EXCESIVO", "contactos": [{"mail": "eferraro@segurosrivadavia.com", "nombre": "FERRARO ENRICO", "obs": "DEMORA EN PAGAR"}, {"mail": "aarrascaeta@segurosrivadavia.com", "nombre": "", "obs": ""}, {"mail": "jirodriguez@segurosrivadavia.com", "nombre": "JUAN IGNACIO RODRIGUEZ", "obs": "PARECE BIEN"}, {"mail": "mesponda@segurosrivadavia.com", "nombre": "MARIAS ESPONDA", "obs": "LENTO"}]}, {"nombre": "BOSTON", "cuit": "", "notas": "", "contactos": [{"mail": "gnievas@boston.com.ar", "nombre": "GASTON NIEVAS", "obs": "QUEBRÓ"}]}, {"nombre": "LA CAJA", "cuit": "30663205931", "notas": "PAGA A LOS 15 DÍAS AL CLIENTE", "contactos": [{"mail": "Grussi@lacaja.com.ar", "nombre": "GRUSSI ALEJANDRO", "obs": "PARECE UTIL"}, {"mail": "Reclamosdeterceroscordoba@lacaja.com.ar", "nombre": "", "obs": ""}, {"mail": "reclamostercerosinterior@lacaja.com.ar", "nombre": "", "obs": ""}]}, {"nombre": "SAN CRISTOBAL", "cuit": "34500045339", "notas": "", "contactos": [{"mail": "CastagninoC@sancristobal.com.ar", "nombre": "CASTAGNINO CLAUDIO", "obs": ""}, {"mail": "NegretteD@sancristobal.com.ar", "nombre": "NEGRETTE DIEGO", "obs": ""}, {"mail": "martinezgiorgisf@sancristobal.com.ar", "nombre": "", "obs": ""}, {"mail": "RPerrin@sancorseguros.com", "nombre": "RAUL PERRIN", "obs": ""}]}, {"nombre": "SANCOR", "cuit": "30500049460", "notas": "CONVENIO CON TALLERES", "contactos": [{"mail": "MReinoso@sancorseguros.com", "nombre": "MARIO REYNOSO", "obs": ""}, {"mail": "terceros@appsolut.us", "nombre": "", "obs": ""}, {"mail": "sancor@rhbsiniestros.com.ar", "nombre": "", "obs": ""}, {"mail": "lnicola@sancorseguros.com", "nombre": "NICOLA LUCRECIA", "obs": "PROMEDIO"}, {"mail": "cseghezzo@sancorseguros.com", "nombre": "CHIARA SEGHEZZO", "obs": ""}]}, {"nombre": "CARUSO", "cuit": "", "notas": "", "contactos": [{"mail": "siniestros@cordobagestion.com.ar", "nombre": "", "obs": ""}, {"mail": "mbareiro@caruso.com.ar", "nombre": "MARIA BELEN", "obs": ""}, {"mail": "pmachaca@caruso.com.ar", "nombre": "PATRICIA ESTHER", "obs": ""}]}, {"nombre": "LA MERIDIONAL", "cuit": "", "notas": "", "contactos": [{"mail": "RCapogrossi@meridionalseguros.com.ar", "nombre": "ROBERTO CAPOGROSSI", "obs": "BIEN"}]}, {"nombre": "MERCANTIL ANDINA (PAGA EL 15%)", "cuit": "30500036911", "notas": "NIEGAN PAGAR HONORARIOS X FRANQUICIA - INSISTIR CON EL SUPERIOR", "contactos": [{"mail": "gimena.vigo@lamercantil.com.ar", "nombre": "GIMENA VIGO", "obs": "IDIOTA - INUTIL"}, {"mail": "diego.montes@lamercantil.com.ar", "nombre": "DIEGO MONTES", "obs": ""}, {"mail": "paula.sileoni@lamercantil.com.ar", "nombre": "PAULA SILEONI", "obs": "UTIL"}, {"mail": "luisina.lagos@lamercantil.com.ar", "nombre": "LUISINA LAGOS", "obs": ""}, {"mail": "consultassigma@lamercantil.com.ar", "nombre": "", "obs": ""}, {"mail": "palopito@lamercantil.com.ar", "nombre": "ESTEBAN PALOPITO", "obs": "IDIOTA"}]}, {"nombre": "TRIUNFO", "cuit": "30500065776", "notas": "MALISIMA", "contactos": [{"mail": "clopez@triunfoseguros.com", "nombre": "CAMILA ALEJANDRA LOPEZ", "obs": "MEJOR Q LOS DOS DE ABAJO"}, {"mail": "vmontivero@triunfoseguros.com", "nombre": "VIRGINIA MONTIVERO", "obs": ""}, {"mail": "fguevara@triunfoseguros.com", "nombre": "FLORENCIA GUEVARA", "obs": ""}]}, {"nombre": "SURA", "cuit": "", "notas": "", "contactos": [{"mail": "alejandra.perichon@segurossura.com.ar", "nombre": "ALEJANDRA PERICHON", "obs": ""}]}, {"nombre": "LA HOLANDO", "cuit": "", "notas": "", "contactos": [{"mail": "eivollenweider@laholando.com", "nombre": "EUGENIA VOLENWEIDER", "obs": ""}, {"mail": "mvvollenweider@laholando.com", "nombre": "VICTORIA VOLENWEIDER", "obs": ""}]}, {"nombre": "FEDERACION                 (PAGA EL 15%)", "cuit": "33707366589", "notas": "PAGA EN 96HS AL CLIENTE", "contactos": [{"mail": "terceros@fedpat.com.ar", "nombre": "PAGA EL 15%", "obs": ""}, {"mail": "liquidacionesriesgosvarios@fedpat.com.ar", "nombre": "", "obs": ""}, {"mail": "lmolina@fedpat.com.a", "nombre": "LUCAS MOLINA", "obs": "HACE PARTE DE CUENTAS"}, {"mail": "cia.reclamos-abog@fedpat.com.ar", "nombre": "", "obs": ""}]}, {"nombre": "MAPFRE", "cuit": "", "notas": "", "contactos": [{"mail": "gsantolini@mapfre.com.ar", "nombre": "GUSTAVO SANTOLINI", "obs": ""}, {"mail": "351630732 WPP", "nombre": "JOEL", "obs": "RESUELVE"}]}, {"nombre": "PRUDENCIA", "cuit": "", "notas": "", "contactos": [{"mail": "tc@prudenciaseguros.com.ar", "nombre": "", "obs": "MAS O MENOS"}]}, {"nombre": "ORBIS", "cuit": "", "notas": "", "contactos": [{"mail": "mdaniel@orbiseguros.com.ar", "nombre": "NATALIA DANIEL", "obs": "CAGADA"}]}, {"nombre": "EXPERTA", "cuit": "30714590541", "notas": "", "contactos": [{"mail": "reclamosmateriales@experta.com.ar", "nombre": "", "obs": "MEJORÓ"}]}, {"nombre": "RIO URUGUAY", "cuit": "", "notas": "", "contactos": [{"mail": "siniestrosparcialesft@riouruguay.com.ar", "nombre": "", "obs": ""}, {"mail": "reclamosmateriales@riouruguay.com.ar", "nombre": "", "obs": ""}, {"mail": "consultasrc@mail.rus.com.ar", "nombre": "", "obs": ""}]}, {"nombre": "NRE", "cuit": "30678561165", "notas": "NI RESPONDE YA", "contactos": [{"mail": "RECLAMOS.NRE@GMAIL.COM", "nombre": "", "obs": "COMPLICADISIMO"}, {"mail": "resoluciones.nre@gmail.com", "nombre": "", "obs": ""}]}, {"nombre": "PROF", "cuit": "", "notas": "", "contactos": [{"mail": "prof.terceros@tecno-red.com.ar", "nombre": "", "obs": "OFRECIMIENTOS MALOS"}]}, {"nombre": "SEGURO METAL", "cuit": "", "notas": "", "contactos": [{"mail": "mfiz@segurometal.com", "nombre": "MAURICIO FIZ", "obs": "RESUELVE"}]}, {"nombre": "GALICIA", "cuit": "", "notas": "", "contactos": [{"mail": "cristiangiordano@hotmail.com", "nombre": "CRISTIAN GIORDANO", "obs": "INUTIL"}, {"mail": "jbosco@galiciaseguros.com.ar", "nombre": "", "obs": "RESUELVE"}]}, {"nombre": "ZURICH", "cuit": "30500049770", "notas": "", "contactos": []}, {"nombre": "BERKLEY", "cuit": "30500035788", "notas": "", "contactos": []}, {"nombre": "PROVINCIA", "cuit": "30527508165", "notas": "", "contactos": []}, {"nombre": "VICTORIA", "cuit": "30500032266", "notas": "", "contactos": []}, {"nombre": "ALLIANZ", "cuit": "", "notas": "", "contactos": [{"mail": "reclamosterceroscba@estudioscanloss.com.ar", "nombre": "", "obs": ""}]}];
+
+const n=new Date(); calYear=n.getFullYear(); calMonth=n.getMonth();
+
+// Load reclamos from localStorage
+try {
+  const r=localStorage.getItem('lt_reclamos'); if(r) reclamos=JSON.parse(r);
+  const cnt=localStorage.getItem('lt_cnt'); if(cnt) expCnt=parseInt(cnt);
+} catch(e){}
+
+// Load companias: localStorage is the ONLY source of truth once saved.
+// BUNDLED_COMPANIAS only used on first run (no localStorage yet).
+try {
+  const lsComps=localStorage.getItem('lt_companias');
+  if(lsComps){
+    const saved=JSON.parse(lsComps);
+    // Use saved data as-is — user deletions and edits are preserved exactly
+    companias=Array.isArray(saved)?saved:BUNDLED_COMPANIAS.slice();
+  } else {
+    // First ever run — seed with bundled data and save immediately
+    companias=BUNDLED_COMPANIAS.slice();
+    try{localStorage.setItem('lt_companias',JSON.stringify(companias));localStorage.setItem('lt_ver',DATA_VERSION);}catch(e){}
+  }
+} catch(e){ companias=BUNDLED_COMPANIAS.slice(); }
+
+// Sample reclamos only if nothing saved yet
+if(!reclamos.length){
+  expCnt=4;
+  reclamos=[
+    {exp:'EXP-0001',cli:'María González',comp:'LA SEGUNDA',nrocomp:'',con:'Jorge González',rel:'cónyuge',tel:'351-4123456',mail:'maria@mail.com',prod:'Martínez Seguros',tipo:'Daño material',estado:'En trámite',monto:'850000',hon:'85000',fec:'2025-11-10',venc:addDays(today(),8),obs:'Peritaje realizado. Esperando liquidación.'},
+    {exp:'EXP-0002',cli:'Carlos Pérez',comp:'ZURICH',nrocomp:'',con:'Carlos Pérez',rel:'titular',tel:'351-4987654',mail:'carlitos@mail.com',prod:'García & Asociados',tipo:'Lesiones',estado:'Urgente',monto:'3200000',hon:'320000',fec:'2025-09-22',venc:addDays(today(),3),obs:'Vence próximamente. Solicitar extensión de plazo.'},
+    {exp:'EXP-0003',cli:'Ana Martínez',comp:'MAPFRE',nrocomp:'',con:'Lucas Martínez',rel:'hijo / apoderado',tel:'351-4456789',mail:'lucas@mail.com',prod:'Martínez Seguros',tipo:'Daño material',estado:'Oferta realizada',monto:'420000',hon:'42000',fec:'2025-12-05',venc:addDays(today(),30),obs:'Oferta: $380.000. Cliente evalúa aceptación.'}
+  ];
+}
+
+loadUserMsgs(); renderTable(); updateStats(); renderComps(); refreshCompList(); renderMsgs(); renderDirectorio();
+</script>
+
+<!-- MODAL DIRECTORIO COMPAÑIA -->
+<div class="overlay" id="modal-dir">
+<div class="modal" style="width:620px;max-height:90vh;overflow-y:auto;">
+  <div class="mt" id="dir-modal-title">Nueva compañía</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+    <div class="fg full"><label class="fl">Nombre de la compañía</label><input class="fi" id="dir-nom" placeholder="Ej: LA SEGUNDA"/></div>
+    <div class="fg"><label class="fl">CUIT</label><input class="fi" id="dir-cuit" placeholder="30500017704"/></div>
+    <div class="fg full"><label class="fl">Notas generales (comportamiento, plazos, advertencias)</label><textarea class="fta" id="dir-notas" rows="2" placeholder="Ej: PAGA A LOS 15 DÍAS — INSISTIR PARA HONORARIOS"></textarea></div>
+  </div>
+  <div style="border-top:0.5px solid var(--border);padding-top:12px;">
+    <div style="font-size:12px;font-weight:500;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px;">Contactos</div>
+    <div id="dir-ct-form"></div>
+    <button class="bs" onclick="dirAddCt()" style="width:100%;margin-top:6px;font-size:12px;">+ Agregar contacto</button>
+  </div>
+  <div class="mf">
+    <button class="bc" onclick="close2('modal-dir')">Cancelar</button>
+    <button class="bp" onclick="dirSaveComp()">Guardar</button>
+  </div>
+</div>
+</div>
+
+<!-- MODAL EDITAR MODELO DE MENSAJE -->
+<div class="overlay" id="modal-edit-msg">
+<div class="modal" style="width:620px;">
+  <div class="mt" id="em-modal-title">Nuevo modelo</div>
+  <div style="display:grid;gap:10px;">
+    <div style="display:grid;grid-template-columns:1fr auto;gap:10px;">
+      <div class="fg">
+        <label class="fl">Título del modelo</label>
+        <input class="fi" id="em-title" placeholder="Ej: Solicitud de documentación inicial"/>
+      </div>
+      <div class="fg">
+        <label class="fl">Canal</label>
+        <select class="fi" id="em-canal" onchange="document.getElementById('em-subject-wrap').style.display=this.value==='mail'?'block':'none'">
+          <option value="wpp">WhatsApp</option>
+          <option value="mail">Mail</option>
+        </select>
+      </div>
+    </div>
+    <div class="fg" id="em-subject-wrap" style="display:none;">
+      <label class="fl">Asunto del mail</label>
+      <input class="fi" id="em-subject" placeholder="Ej: Reclamo N° {nsiniestro} — {nombre}"/>
+    </div>
+    <div class="fg">
+      <label class="fl">Texto del mensaje</label>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:4px;">
+        Variables disponibles: <code style="background:var(--bg2);padding:1px 5px;border-radius:4px;">{nombre}</code>
+        <code style="background:var(--bg2);padding:1px 5px;border-radius:4px;">{compania}</code>
+        <code style="background:var(--bg2);padding:1px 5px;border-radius:4px;">{nsiniestro}</code>
+        <code style="background:var(--bg2);padding:1px 5px;border-radius:4px;">{monto}</code>
+        — se reemplazan automáticamente al personalizar
+      </div>
+      <textarea class="fta" id="em-body" rows="12" style="font-size:13px;line-height:1.7;" placeholder="Escribí tu modelo acá..."></textarea>
+    </div>
+  </div>
+  <div class="mf">
+    <button class="bc" onclick="close2('modal-edit-msg')">Cancelar</button>
+    <button class="bp" onclick="saveEditMsg()">Guardar modelo</button>
+  </div>
+</div>
+</div>
+</body>
+</html>
